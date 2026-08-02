@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+langchain
+langchain-ollama
+langchain-core
+langchain-community
+selenium
+chromedriver-autoinstaller
+sqlalchemy
+python-multipart
+pydantic-settings
