@@ -68,6 +68,10 @@ def rebuild_agent():
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000)
 
+class JdRequest(BaseModel):
+    job_title: str = Field(default="", max_length=200)
+    jd_text: str = Field(default="", max_length=5000)
+
 class CreateSessionRequest(BaseModel):
     title: str = Field(default="新面试")
 
@@ -237,6 +241,53 @@ async def delete_resume(session_id: str):
             break
     save_sessions(sessions)
     return {"status": "ok", "message": "简历已从知识库中删除"}
+
+# ==================== 岗位 JD 接口 ====================
+
+@app.get("/upload/{session_id}/jd")
+async def get_jd_info(session_id: str):
+    """查询指定会话的岗位 JD 信息"""
+    sessions = load_sessions()
+    for s in sessions:
+        if s["id"] == session_id:
+            jd = s.get("jd")
+            if jd:
+                return {"uploaded": True, **jd}
+            return {"uploaded": False}
+    return {"uploaded": False}
+
+
+@app.post("/upload/{session_id}/jd")
+async def upload_jd(session_id: str, jd: JdRequest):
+    """上传/更新岗位 JD"""
+    if not jd.job_title.strip() and not jd.jd_text.strip():
+        raise HTTPException(status_code=400, detail="岗位名称和JD内容至少填写一项")
+
+    sessions = load_sessions()
+    for s in sessions:
+        if s["id"] == session_id:
+            s["jd"] = {
+                "job_title": jd.job_title.strip(),
+                "jd_text": jd.jd_text.strip(),
+                "uploaded_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            }
+            save_sessions(sessions)
+            logger.info(f"[JD上传] session={session_id}, title={jd.job_title[:30]}")
+            return {"status": "ok", "message": "岗位信息已保存"}
+    raise HTTPException(status_code=404, detail="会话不存在")
+
+
+@app.delete("/upload/{session_id}/jd")
+async def delete_jd(session_id: str):
+    """删除指定会话的岗位 JD"""
+    sessions = load_sessions()
+    for s in sessions:
+        if s["id"] == session_id:
+            s.pop("jd", None)
+            save_sessions(sessions)
+            logger.info(f"[JD删除] session={session_id}")
+            return {"status": "ok", "message": "岗位信息已删除"}
+    return {"status": "ok", "message": "岗位信息已删除"}
 
 # ==================== 模型设置接口 ====================
 

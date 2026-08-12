@@ -5,6 +5,8 @@ import re
 import time
 import traceback
 import random
+import json
+import os
 from typing import AsyncGenerator
 
 from langchain_ollama import ChatOllama
@@ -338,6 +340,38 @@ class InterviewerAgent:
             logger.warning(f"[预取简历] 检索失败: {e}")
             return None
 
+    def _build_jd_context(self, session_id: str) -> str | None:
+        """从 sessions.json 读取岗位 JD，构建注入对话上下文的文本
+
+        返回 None 表示该会话没有上传岗位信息。
+        """
+        try:
+            sessions_file = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "data", "sessions.json"
+            )
+            with open(sessions_file, "r", encoding="utf-8") as f:
+                sessions = json.load(f)
+            for s in sessions:
+                if s["id"] == session_id:
+                    jd = s.get("jd")
+                    if not jd or not jd.get("jd_text", "").strip():
+                        return None
+                    title = jd.get("job_title", "").strip()
+                    text = jd["jd_text"].strip()
+                    parts = [
+                        "[系统上下文] 以下是求职者应聘的岗位信息（JD），"
+                        "请结合岗位要求与简历内容有针对性地提问。\n"
+                    ]
+                    if title:
+                        parts.append(f"【岗位名称】{title}")
+                    parts.append(f"【岗位要求】\n{text}")
+                    return "\n".join(parts)
+            return None
+        except Exception as e:
+            logger.warning(f"[预取JD] 读取失败: {e}")
+            return None
+
     def stream_chat(self, user_id: str, user_message: str):
         cfg = self.memory.get_config(user_id)
 
@@ -361,9 +395,24 @@ class InterviewerAgent:
 
                 history = self.memory.get_history(user_id)
                 if not history:
-                    # 首次对话
+                    # 首次对话：注入简历 + JD 上下文
                     resume_context = self._build_resume_context(user_id)
-                    if resume_context:
+                    jd_context = self._build_jd_context(user_id)
+
+                    if resume_context and jd_context:
+                        # 既有简历又有岗位 — 对齐两者进行精准提问
+                        user_message = (
+                            "[系统指令] 你只代表面试官，只输出面试官说的话，"
+                            "绝对不要编造求职者的回答。"
+                            "基于简历与岗位要求的匹配度，提出第一个面试问题，"
+                            "重点考察简历中与岗位要求相关的技术能力和项目经验。\n\n"
+                            + resume_context
+                            + "\n\n" + ("=" * 30) + "\n\n"
+                            + jd_context
+                            + "\n\n---\n求职者说：" + user_message
+                        )
+                    elif resume_context and not jd_context:
+                        # 仅有简历
                         user_message = (
                             "[系统指令] 你只代表面试官，只输出面试官说的话，"
                             "绝对不要编造求职者的回答。"
@@ -371,7 +420,19 @@ class InterviewerAgent:
                             + resume_context
                             + "\n\n---\n求职者说：" + user_message
                         )
+                    elif jd_context and not resume_context:
+                        # 仅有岗位 JD — 先了解背景，再对照 JD 提问
+                        user_message = (
+                            "[系统指令] 你只代表面试官，只输出面试官说的话，"
+                            "绝对不要编造求职者的回答。"
+                            "以下是求职者应聘的岗位信息，"
+                            "由于尚未上传简历，请先通过对话了解求职者背景，"
+                            "再结合岗位要求展开技术提问。\n\n"
+                            + jd_context
+                            + "\n\n---\n求职者说：" + user_message
+                        )
                     else:
+                        # 什么都没有
                         user_message = (
                             "[系统指令] 该求职者尚未上传简历，"
                             "请通过对话主动了解其技能、经验、项目背景。"
@@ -453,11 +514,33 @@ class InterviewerAgent:
         history = self.memory.get_history(user_id)
         if not history:
             resume_context = self._build_resume_context(user_id)
-            if resume_context:
+            jd_context = self._build_jd_context(user_id)
+
+            if resume_context and jd_context:
+                user_message = (
+                    "[系统指令] 你只代表面试官，只输出面试官说的话，"
+                    "绝对不要编造求职者的回答。"
+                    "基于简历与岗位要求的匹配度，提出面试问题，"
+                    "重点考察简历中与岗位要求相关的技术能力和项目经验。\n\n"
+                    + resume_context
+                    + "\n\n" + ("=" * 30) + "\n\n"
+                    + jd_context
+                    + "\n\n---\n求职者说：" + user_message
+                )
+            elif resume_context and not jd_context:
                 user_message = (
                     "[系统指令] 你只代表面试官，只输出面试官说的话，"
                     "绝对不要编造求职者的回答。基于简历信息提问。\n\n"
                     + resume_context
+                    + "\n\n---\n求职者说：" + user_message
+                )
+            elif jd_context and not resume_context:
+                user_message = (
+                    "[系统指令] 你只代表面试官，只输出面试官说的话，"
+                    "绝对不要编造求职者的回答。"
+                    "以下是岗位信息，由于未上传简历，请先了解求职者背景，"
+                    "再结合岗位要求展开技术提问。\n\n"
+                    + jd_context
                     + "\n\n---\n求职者说：" + user_message
                 )
             else:

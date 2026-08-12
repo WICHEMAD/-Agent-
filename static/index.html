@@ -373,6 +373,51 @@
             padding: 4px;
         }
         .toggle-pwd:hover { color: #667eea; }
+        /* ========== JD 模态框 ========== */
+        .jd-modal textarea {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-family: -apple-system, 'Microsoft YaHei', sans-serif;
+            resize: vertical;
+            outline: none;
+            box-sizing: border-box;
+            line-height: 1.6;
+        }
+        .jd-modal textarea:focus { border-color: #667eea; }
+        .jd-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.15);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .jd-status .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .jd-status .status-dot.uploaded { background: #f39c12; }
+        .jd-status .jd-name {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .jd-status .remove-jd {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0 2px;
+            line-height: 1;
+        }
+        .jd-status .remove-jd:hover { color: #e74c3c; }
     </style>
 </head>
 <body>
@@ -400,6 +445,12 @@
                         <span class="status-dot uploaded" id="statusDot"></span>
                         <span class="resume-name" id="resumeName" title=""></span>
                         <button class="remove-resume" id="removeResumeBtn" title="删除简历" onclick="removeResume()">✕</button>
+                    </div>
+                    <button class="upload-btn" id="jdBtn" onclick="openJdModal()" disabled>📋 岗位JD</button>
+                    <div class="jd-status" id="jdStatus" style="display:none">
+                        <span class="status-dot uploaded"></span>
+                        <span class="jd-name" id="jdName" title=""></span>
+                        <button class="remove-jd" title="删除岗位" onclick="removeJd()">✕</button>
                     </div>
                     <span class="session-info" id="sessionInfo"></span>
                 </div>
@@ -450,6 +501,27 @@
             <div class="btn-row">
                 <button class="btn-cancel" onclick="closeSettings()">取消</button>
                 <button class="btn-save" onclick="saveSettings()">保存并生效</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 岗位 JD 弹窗 ========== -->
+    <div class="modal-overlay" id="jdOverlay" onclick="if(event.target===this)closeJdModal()">
+        <div class="modal jd-modal">
+            <h2>📋 岗位信息</h2>
+            <label>岗位名称</label>
+            <input id="jdJobTitle" placeholder="例如：Python 后端开发工程师" maxlength="200" />
+            <div class="hint">选填，用于在标题区显示</div>
+
+            <label>岗位 JD</label>
+            <textarea id="jdText" rows="10" placeholder="粘贴岗位职责和要求，例如：&#10;&#10;岗位职责：&#10;1. 负责后端 API 设计与开发&#10;2. 参与系统架构设计&#10;&#10;任职要求：&#10;1. 3年以上 Python 开发经验&#10;2. 熟悉 Django/FastAPI 框架" maxlength="5000"></textarea>
+            <div class="hint" id="jdCharCount">0 / 5000 字</div>
+
+            <div class="status-msg" id="jdStatusMsg"></div>
+
+            <div class="btn-row">
+                <button class="btn-cancel" onclick="closeJdModal()">取消</button>
+                <button class="btn-save" onclick="saveJd()">保存</button>
             </div>
         </div>
     </div>
@@ -520,6 +592,9 @@
                 document.getElementById("uploadBtn").disabled = true;
                 document.getElementById("resumeStatus").style.display = "none";
                 document.getElementById("uploadBtn").textContent = "📄 上传简历";
+                document.getElementById("jdBtn").disabled = true;
+                document.getElementById("jdStatus").style.display = "none";
+                document.getElementById("jdBtn").textContent = "📋 岗位JD";
             }
             await loadSessions();
         }
@@ -529,6 +604,7 @@
             document.getElementById("userInput").disabled = false;
             document.getElementById("sendBtn").disabled = false;
             document.getElementById("uploadBtn").disabled = false;
+            document.getElementById("jdBtn").disabled = false;
             document.getElementById("headerTitle").textContent = "面试官 Agent";
             document.getElementById("sessionInfo").textContent = `会话: ${sessionId}`;
             document.getElementById("messages").innerHTML = "";
@@ -542,6 +618,7 @@
                 console.error("加载历史失败:", err);
             }
             await loadResumeStatus();
+            await loadJdStatus();
             await loadSessions();
             document.getElementById("userInput").focus();
         }
@@ -594,6 +671,115 @@
             }
         }
 
+        // ========== 岗位 JD 管理 ==========
+
+        async function loadJdStatus() {
+            if (!currentSessionId) return;
+            const statusEl = document.getElementById("jdStatus");
+            const nameEl = document.getElementById("jdName");
+            const jdBtn = document.getElementById("jdBtn");
+
+            try {
+                const resp = await fetch(`${API_BASE}/upload/${currentSessionId}/jd`);
+                const data = await resp.json();
+                if (data.uploaded) {
+                    const title = data.job_title || "未命名岗位";
+                    nameEl.textContent = title;
+                    nameEl.title = `${title} — 上传于 ${data.uploaded_at}`;
+                    statusEl.style.display = "flex";
+                    jdBtn.textContent = "📋 编辑JD";
+                } else {
+                    statusEl.style.display = "none";
+                    jdBtn.textContent = "📋 岗位JD";
+                }
+            } catch (err) {
+                console.error("加载JD状态失败:", err);
+            }
+        }
+
+        async function openJdModal() {
+            if (!currentSessionId) return;
+            // 加载已有 JD 内容（用于编辑）
+            try {
+                const resp = await fetch(`${API_BASE}/upload/${currentSessionId}/jd`);
+                const data = await resp.json();
+                if (data.uploaded) {
+                    document.getElementById("jdJobTitle").value = data.job_title || "";
+                    document.getElementById("jdText").value = data.jd_text || "";
+                } else {
+                    document.getElementById("jdJobTitle").value = "";
+                    document.getElementById("jdText").value = "";
+                }
+                document.getElementById("jdCharCount").textContent =
+                    `${document.getElementById("jdText").value.length} / 5000 字`;
+            } catch (err) {
+                console.error("加载JD失败:", err);
+            }
+            document.getElementById("jdStatusMsg").textContent = "";
+            document.getElementById("jdStatusMsg").className = "status-msg";
+            document.getElementById("jdOverlay").classList.add("show");
+        }
+
+        function closeJdModal() {
+            document.getElementById("jdOverlay").classList.remove("show");
+        }
+
+        async function saveJd() {
+            const status = document.getElementById("jdStatusMsg");
+            status.textContent = "";
+            status.className = "status-msg";
+
+            const jobTitle = document.getElementById("jdJobTitle").value.trim();
+            const jdText = document.getElementById("jdText").value.trim();
+
+            if (!jobTitle && !jdText) {
+                status.textContent = "⚠ 请至少填写岗位名称或JD内容";
+                status.className = "status-msg error";
+                return;
+            }
+
+            try {
+                const resp = await fetch(`${API_BASE}/upload/${currentSessionId}/jd`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ job_title: jobTitle, jd_text: jdText }),
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    status.textContent = "✅ " + data.message;
+                    status.className = "status-msg success";
+                    await loadJdStatus();
+                    setTimeout(closeJdModal, 800);
+                } else {
+                    status.textContent = "❌ " + (data.detail || "保存失败");
+                    status.className = "status-msg error";
+                }
+            } catch (err) {
+                status.textContent = "❌ 网络错误，保存失败";
+                status.className = "status-msg error";
+            }
+        }
+
+        async function removeJd() {
+            if (!currentSessionId) return;
+            if (!confirm("确定删除当前会话的岗位信息吗？")) return;
+
+            try {
+                const resp = await fetch(`${API_BASE}/upload/${currentSessionId}/jd`, {
+                    method: "DELETE",
+                });
+                if (resp.ok) {
+                    showToast("✅ 岗位信息已删除", "success");
+                    await loadJdStatus();
+                } else {
+                    const data = await resp.json();
+                    showToast(`❌ ${data.detail || "删除失败"}`, "error");
+                }
+            } catch (err) {
+                showToast("❌ 网络错误，删除失败", "error");
+            }
+        }
+
         function renderMessages() {
             const container = document.getElementById("messages");
             if (allMessages.length === 0) {
@@ -627,6 +813,18 @@
         }
 
         // ========== 简历上传 ==========
+
+        // 字符计数
+        document.addEventListener("DOMContentLoaded", () => {
+            const jdText = document.getElementById("jdText");
+            if (jdText) {
+                jdText.addEventListener("input", () => {
+                    document.getElementById("jdCharCount").textContent =
+                        `${jdText.value.length} / 5000 字`;
+                });
+            }
+        });
+
         function showToast(msg, type) {
             const toast = document.createElement("div");
             toast.className = `upload-toast ${type}`;
