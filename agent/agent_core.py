@@ -59,6 +59,32 @@ def _is_market_query(message: str) -> str | None:
     return None
 
 
+# 检测求职者是否在询问面试元信息（岗位、流程等），而非回答技术题
+_META_QUESTION_PATTERNS = [
+    r'(?:面试的?|应聘的?|这个|什么).*岗位.*(?:是?什么|叫?什么)',
+    r'(?:我|这个).*(?:面试|应聘).*(?:岗位|职位).*',
+    r'岗位.*(?:要求|JD|职责|描述)',
+    r'(?:这个|什么).*(?:技术栈|技术).*要求',
+    r'(?:还要|继续).*(?:面试|问).*多久',
+    r'(?:面试|还要).*(?:多久|几轮|什么.*时候|流程)',
+    r'(?:我的?|简历).*(?:表现|怎么样|如何)',
+    r'(?:为什么|怎么).*(?:这样|这么).*问',
+    r'为什么.*(?:一直|老是|总).*问',
+    r'JD.*(?:是|有).*什么',
+    r'(?:这个|你).*是.*面试.*(?:什么|什么岗位|哪个)',
+    r'换个话题',
+    r'能不能.*(?:换个|问).*问题',
+]
+
+
+def _is_meta_question(message: str) -> bool:
+    """检测消息是否为面试元信息询问（非技术回答）。"""
+    for pattern in _META_QUESTION_PATTERNS:
+        if re.search(pattern, message, re.IGNORECASE):
+            return True
+    return False
+
+
 def _extract_search_keywords(message: str) -> str:
     """从用户消息中提取搜索关键词"""
     # 提取技术栈关键词
@@ -443,15 +469,25 @@ class InterviewerAgent:
                 else:
                     # 非首次对话：面试追问模式，但允许调用工具
                     jd_context = self._build_jd_context(user_id)
-                    user_message = (
-                        "[本轮指令] 你是面试官，只输出面试官说的话，不要编造求职者的回答。\n"
-                        "- 如果求职者在回答面试题，简短评估后追问一个问题。\n"
-                        "- 如果求职者询问岗位行情、薪资数据、招聘信息，立即调用 job_info_scraper 工具。\n"
-                        "- 如果求职者要做薪资计算，调用 simple_calculator 工具。\n"
-                        "- 如果求职者询问岗位信息、面试流程、面试进度等非技术问题，直接回答，不需要追问。\n\n"
-                        + (jd_context + "\n\n" if jd_context else "")
-                        + "求职者说：" + user_message
-                    )
+
+                    if _is_meta_question(user_message):
+                        # 元问题：求职者在问岗位/流程等非技术问题，直接回答
+                        user_message = (
+                            "[本轮指令] 你是面试官，求职者在询问面试相关信息。"
+                            "请直接回答他的问题，语气友好、信息准确。不要追问技术问题。\n\n"
+                            + (jd_context + "\n\n" if jd_context else "")
+                            + "求职者说：" + user_message
+                        )
+                    else:
+                        # 技术回答或闲聊：追问模式
+                        user_message = (
+                            "[本轮指令] 你是面试官，只输出面试官说的话，不要编造求职者的回答。\n"
+                            "- 如果求职者在回答面试题，简短评估后追问一个问题。\n"
+                            "- 如果求职者询问岗位行情、薪资数据、招聘信息，立即调用 job_info_scraper 工具。\n"
+                            "- 如果求职者要做薪资计算，调用 simple_calculator 工具。\n\n"
+                            + (jd_context + "\n\n" if jd_context else "")
+                            + "求职者说：" + user_message
+                        )
                 # 缓冲所有 token，用于响应过滤
                 buffer: list[str] = []
                 for chunk in self.agent.stream(
@@ -556,15 +592,25 @@ class InterviewerAgent:
         else:
             # 非首次对话：面试追问模式，但允许调用工具
             jd_context = self._build_jd_context(user_id)
-            user_message = (
-                "[本轮指令] 你是面试官，只输出面试官说的话，不要编造求职者的回答。\n"
-                "- 如果求职者在回答面试题，简短评估后追问一个问题。\n"
-                "- 如果求职者询问岗位行情、薪资数据、招聘信息，立即调用 job_info_scraper 工具。\n"
-                "- 如果求职者要做薪资计算，调用 simple_calculator 工具。\n"
-                "- 如果求职者询问岗位信息、面试流程、面试进度等非技术问题，直接回答，不需要追问。\n\n"
-                + (jd_context + "\n\n" if jd_context else "")
-                + "求职者说：" + user_message
-            )
+
+            if _is_meta_question(user_message):
+                # 元问题：直接回答
+                user_message = (
+                    "[本轮指令] 你是面试官，求职者在询问面试相关信息。"
+                    "请直接回答他的问题，语气友好、信息准确。不要追问技术问题。\n\n"
+                    + (jd_context + "\n\n" if jd_context else "")
+                    + "求职者说：" + user_message
+                )
+            else:
+                # 技术回答或闲聊：追问模式
+                user_message = (
+                    "[本轮指令] 你是面试官，只输出面试官说的话，不要编造求职者的回答。\n"
+                    "- 如果求职者在回答面试题，简短评估后追问一个问题。\n"
+                    "- 如果求职者询问岗位行情、薪资数据、招聘信息，立即调用 job_info_scraper 工具。\n"
+                    "- 如果求职者要做薪资计算，调用 simple_calculator 工具。\n\n"
+                    + (jd_context + "\n\n" if jd_context else "")
+                    + "求职者说：" + user_message
+                )
 
         try:
             result = _call_with_retry(
