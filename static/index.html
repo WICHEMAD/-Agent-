@@ -418,6 +418,18 @@
             line-height: 1;
         }
         .jd-status .remove-jd:hover { color: #e74c3c; }
+        .model-badge {
+            background: rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.85);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: default;
+        }
     </style>
 </head>
 <body>
@@ -439,6 +451,7 @@
                 <h1 id="headerTitle">面试官 Agent</h1>
                 <div class="upload-area">
                     <button class="settings-btn" onclick="openSettings()" title="模型设置">⚙</button>
+                    <span class="model-badge" id="modelBadge" title="当前模型">...</span>
                     <input type="file" id="resumeFile" accept=".pdf,.docx,.txt,.md" style="display:none" onchange="uploadResume()" />
                     <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('resumeFile').click()" disabled>📄 上传简历</button>
                     <div class="resume-status" id="resumeStatus" style="display:none">
@@ -534,6 +547,19 @@
 
         // ========== 初始化 ==========
         loadSessions();
+        loadModelName();
+
+        async function loadModelName() {
+            try {
+                const resp = await fetch(`${API_BASE}/settings`);
+                const data = await resp.json();
+                const badge = document.getElementById("modelBadge");
+                badge.textContent = data.model_name || "未知";
+                badge.title = `当前模型: ${data.model_name}\n提供商: ${data.provider}`;
+            } catch (err) {
+                document.getElementById("modelBadge").textContent = "—";
+            }
+        }
 
         async function loadSessions() {
             try {
@@ -960,6 +986,7 @@
                 if (resp.ok) {
                     status.textContent = "✅ 设置已保存，Agent 已切换模型";
                     status.className = "status-msg success";
+                    loadModelName();
                     setTimeout(closeSettings, 1200);
                 } else {
                     status.textContent = "❌ " + (data.detail || "保存失败");
