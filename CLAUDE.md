@@ -26,9 +26,56 @@
 
 ---
 
-## 二、核心功能
+## 二、技术选型与理由
 
-### 2.1 模拟面试（主线）
+### 总览
+
+| 层 | 技术 | 理由 |
+|---|---|---|
+| 后端框架 | FastAPI + Uvicorn | 异步原生支持，SSE 流式响应开箱即用，自带 OpenAPI 文档 |
+| Agent 框架 | LangChain + LangGraph | 统一 LLM 调用抽象，Ollama / OpenAI 双模式切换无需改代码；LangGraph 提供 Checkpoint 持久化 |
+| 对话模型 | Ollama / OpenAI 兼容 API | Ollama 本地运行数据不出本机、免费用；OpenAI 兼容模式对接 DeepSeek、GPT-4o 等云端模型 |
+| Embedding | Ollama Embedding（qwen3-embedding:0.6b） | 本地运行、与 Ollama 统一运维，中文语义理解好 |
+| 向量库 | ChromaDB | 轻量级本地向量库，零配置，与 LangChain 深度集成 |
+| 文本分块 | LangChain RecursiveCharacterTextSplitter | 按自然段 + 标点符号递归切分，中文友好，重叠窗口保证语义连贯 |
+| 爬虫 | Selenium + ChromeDriver | 猎聘等招聘网站 JS 动态渲染，requests 拿不到数据 |
+| 对话存储 | SQLite（LangGraph SqliteSaver） | 零配置本地持久化，单文件便携，LangGraph 原生支持 |
+| 会话元数据 | JSON 文件 | 数据量极小（几十条会话），JSON 文件足够简单，无需引入数据库 |
+| 前端 | 原生 HTML/CSS/JS | 功能聚焦单页面，无路由/状态管理需求，引入框架反而过重 |
+| 简历解析 | PyPDF + docx2txt | 覆盖 PDF/DOCX 两种主流简历格式 |
+
+### 为什么这样选
+
+**为什么 FastAPI 而不是 Flask？**
+核心需求是流式对话（SSE），FastAPI 的 `StreamingResponse` + `async generator` 原生支持，而 Flask 需要额外插件且异步能力弱。
+
+**为什么 LangChain 而不是直接调 API？**
+需要 Tool Calling（LLM 自动决定是否调用爬虫/计算器）、多模型切换、Checkpoint 持久化 —— LangChain 封装了这些能力，自己从零实现约需 500+ 行胶水代码。
+
+**为什么 Ollama 而不只用云端 API？**
+- 简历数据在本地，部分用户对隐私敏感
+- Embedding 模型走本地 Ollama，速度和成本都优于云端
+- 同时保留 OpenAI 兼容模式作为备选
+
+**为什么 ChromaDB 而不是 FAISS / Milvus？**
+- FAISS 是纯内存，重启丢失，需手动序列化
+- Milvus 需要 Docker，太重
+- ChromaDB 一行 `persist_directory` 即可本地持久化
+
+**为什么 Selenium 而不是 requests + BeautifulSoup？**
+猎聘岗位列表完全由 JS 渲染，`requests.get()` 只能拿到空壳 HTML。放弃 `requests` 方案后试了 Selenium 无头模式，能正常拿到 5 条岗位卡片。
+
+**为什么前端不用 Vue/React？**
+前端只有 3 个交互区域（侧边栏、聊天区、设置弹窗），总代码约 400 行。引入框架意味着构建工具链、状态管理、组件拆分，投入产出比极低。原生 JS 足够清晰，后续维护无框架版本升级负担。
+
+**为什么用 JSON 文件存会话元数据？**
+会话元数据只有一个列表（id、title、时间、消息数），几十条数据量。JSON 文件读写一行 `json.load/dump`，比 SQLite 更直观，且与 checkpoints.db 分工明确（JSON = 元数据索引，SQLite = 对话内容）。
+
+---
+
+## 三、核心功能
+
+### 3.1 模拟面试（主线）
 
 **流程：** 创建会话 → 上传简历（可选）→ LLM 发起第一个问题 → 求职者回答 → 追问/切换话题 → 循环
 
@@ -43,23 +90,23 @@
 - 提到了踩过的坑和解决方案
 - 能对比不同方案的优劣
 
-### 2.2 简历 RAG
+### 3.2 简历 RAG
 
 上传 PDF/DOCX/TXT/MD → 分块(默认 500 字/块，重叠 50 字) → Ollama Embedding → Chroma 向量存储。面试时自动检索简历片段注入 LLM 上下文，无需 LLM 主动调用工具。
 
 **约束：** 按 `session_id` 隔离，每个会话的简历互不可见。
 
-### 2.3 岗位行情爬虫
+### 3.3 岗位行情爬虫
 
 Selenium 无头爬取猎聘网前 5 条岗位。当用户消息匹配到市场查询模式（如"深圳Python后端薪资多少"）时，LLM 调用 `job_info_scraper` 工具。
 
 **降级策略：** 爬虫失败重试 3 次 → 返回模拟数据，标注 `[模拟数据]`。
 
-### 2.4 薪资计算器
+### 3.4 薪资计算器
 
 安全 eval，只允许数字和基本运算符 `+-*/()%^`，禁止 `__builtins__`。表达式最长 100 字符。
 
-### 2.5 对话记忆
+### 3.5 对话记忆
 
 - LangGraph SQLite checkpoint 持久化
 - 每个 session_id 独立 thread_id
@@ -68,7 +115,7 @@ Selenium 无头爬取猎聘网前 5 条岗位。当用户消息匹配到市场�
 
 ---
 
-## 三、对话架构
+## 四、对话架构
 
 ### 消息流
 
@@ -114,7 +161,7 @@ LLM 倾向生成完整对话，会编造求职者回答（"求职者：我熟悉
 
 ---
 
-## 四、代码地图
+## 五、代码地图
 
 ```
 interviewer_agent/
@@ -184,7 +231,7 @@ interviewer_agent/
 
 ---
 
-## 五、关键数据流
+## 六、关键数据流
 
 ### 会话生命周期
 
@@ -220,7 +267,7 @@ interviewer_agent/
 
 ---
 
-## 六、配置体系
+## 七、配置体系
 
 ### 配置来源优先级
 
@@ -256,7 +303,7 @@ interviewer_agent/
 
 ---
 
-## 七、开发约定
+## 八、开发约定
 
 ### 新增工具
 
@@ -318,7 +365,7 @@ ChatOpenAI(model=..., temperature=..., openai_api_key=..., openai_api_base=...)
 
 ---
 
-## 八、风险与注意事项
+## 九、风险与注意事项
 
 1. **`data/model_settings.json` 含 API Key** — 已在 `.gitignore` 中，永远不要提交
 2. **爬虫依赖 Chrome 浏览器** — `JobScraperTool` 的 `binary_location` 硬编码了 Windows Chrome 路径，非 Windows 需修改
@@ -330,7 +377,7 @@ ChatOpenAI(model=..., temperature=..., openai_api_key=..., openai_api_base=...)
 
 ---
 
-## 九、未来可扩展方向
+## 十、未来可扩展方向
 
 | 方向 | 说明 |
 |---|---|
