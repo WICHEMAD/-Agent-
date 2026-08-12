@@ -125,6 +125,80 @@
         }
         .main-header h1 { font-size: 17px; font-weight: 600; }
         .main-header .session-info { font-size: 12px; opacity: 0.85; }
+        .main-header .upload-area {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .upload-btn {
+            background: rgba(255,255,255,0.25);
+            border: 2px solid rgba(255,255,255,0.6);
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .upload-btn:hover { background: rgba(255,255,255,0.4); border-color: #fff; }
+        .upload-btn:disabled {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.35);
+            color: rgba(255,255,255,0.6);
+            cursor: not-allowed;
+        }
+        .resume-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.15);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .resume-status .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .resume-status .status-dot.uploaded { background: #2ecc71; }
+        .resume-status .status-dot.empty { background: rgba(255,255,255,0.5); }
+        .resume-status .resume-name {
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .resume-status .remove-resume {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0 2px;
+            line-height: 1;
+        }
+        .resume-status .remove-resume:hover { color: #e74c3c; }
+        .upload-toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 999;
+            animation: fadeIn 0.3s;
+            color: #fff;
+        }
+        .upload-toast.success { background: #27ae60; }
+        .upload-toast.error { background: #e74c3c; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
         .messages {
             flex: 1;
             overflow-y: auto;
@@ -195,6 +269,110 @@
             gap: 8px;
         }
         .empty-state .icon { font-size: 48px; }
+        /* ========== 设置按钮与弹窗 ========== */
+        .settings-btn {
+            background: rgba(255,255,255,0.25);
+            border: 2px solid rgba(255,255,255,0.6);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+            line-height: 1;
+        }
+        .settings-btn:hover { background: rgba(255,255,255,0.4); border-color: #fff; }
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: #fff;
+            border-radius: 12px;
+            padding: 28px 32px;
+            width: 440px;
+            max-width: 90vw;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+        }
+        .modal h2 { font-size: 18px; margin-bottom: 20px; color: #1e1e2f; }
+        .modal label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+            margin-top: 14px;
+        }
+        .modal label:first-of-type { margin-top: 0; }
+        .modal select, .modal input {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .modal select:focus, .modal input:focus { border-color: #667eea; }
+        .modal .hint {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+        }
+        .modal .btn-row {
+            margin-top: 22px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .modal .btn-row button {
+            padding: 9px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+        }
+        .modal .btn-save {
+            background: #667eea;
+            color: #fff;
+        }
+        .modal .btn-save:hover { background: #5a6fd6; }
+        .modal .btn-cancel {
+            background: #eee;
+            color: #555;
+        }
+        .modal .btn-cancel:hover { background: #ddd; }
+        .modal .status-msg {
+            font-size: 13px;
+            margin-top: 12px;
+            text-align: center;
+            min-height: 20px;
+        }
+        .modal .status-msg.success { color: #27ae60; }
+        .modal .status-msg.error { color: #e74c3c; }
+        .api-key-wrapper {
+            position: relative;
+        }
+        .api-key-wrapper input { padding-right: 44px; }
+        .toggle-pwd {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #999;
+            padding: 4px;
+        }
+        .toggle-pwd:hover { color: #667eea; }
     </style>
 </head>
 <body>
@@ -214,7 +392,17 @@
         <div class="main">
             <div class="main-header">
                 <h1 id="headerTitle">面试官 Agent</h1>
-                <span class="session-info" id="sessionInfo"></span>
+                <div class="upload-area">
+                    <button class="settings-btn" onclick="openSettings()" title="模型设置">⚙</button>
+                    <input type="file" id="resumeFile" accept=".pdf,.docx,.txt,.md" style="display:none" onchange="uploadResume()" />
+                    <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('resumeFile').click()" disabled>📄 上传简历</button>
+                    <div class="resume-status" id="resumeStatus" style="display:none">
+                        <span class="status-dot uploaded" id="statusDot"></span>
+                        <span class="resume-name" id="resumeName" title=""></span>
+                        <button class="remove-resume" id="removeResumeBtn" title="删除简历" onclick="removeResume()">✕</button>
+                    </div>
+                    <span class="session-info" id="sessionInfo"></span>
+                </div>
             </div>
             <div class="messages" id="messages">
                 <div class="empty-state">
@@ -225,6 +413,43 @@
             <div class="input-area">
                 <input id="userInput" placeholder="输入你的回答..." onkeydown="if(event.key==='Enter')sendMessage()" autofocus disabled />
                 <button id="sendBtn" onclick="sendMessage()" disabled>发送</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 模型设置弹窗 ========== -->
+    <div class="modal-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+        <div class="modal">
+            <h2>⚙ 模型设置</h2>
+            <label>模型提供商</label>
+            <select id="settingsProvider" onchange="onProviderChange()">
+                <option value="ollama">Ollama（本地）</option>
+                <option value="openai_compatible">OpenAI 兼容 API</option>
+            </select>
+
+            <label>模型名称</label>
+            <input id="settingsModelName" placeholder="例如：deepseek-r1:7b 或 deepseek-chat" />
+            <div class="hint" id="modelNameHint">Ollama 模型名（如 deepseek-r1:7b）</div>
+
+            <div id="apiKeyGroup">
+                <label>API Key</label>
+                <div class="api-key-wrapper">
+                    <input id="settingsApiKey" type="password" placeholder="sk-..." autocomplete="off" />
+                    <button class="toggle-pwd" onclick="toggleApiKey()" title="显示/隐藏">👁</button>
+                </div>
+            </div>
+
+            <div id="baseUrlGroup">
+                <label>Base URL</label>
+                <input id="settingsBaseUrl" placeholder="http://localhost:11434" />
+                <div class="hint" id="baseUrlHint">Ollama 服务地址</div>
+            </div>
+
+            <div class="status-msg" id="settingsStatus"></div>
+
+            <div class="btn-row">
+                <button class="btn-cancel" onclick="closeSettings()">取消</button>
+                <button class="btn-save" onclick="saveSettings()">保存并生效</button>
             </div>
         </div>
     </div>
@@ -292,6 +517,9 @@
                 document.getElementById("sessionInfo").textContent = "";
                 document.getElementById("userInput").disabled = true;
                 document.getElementById("sendBtn").disabled = true;
+                document.getElementById("uploadBtn").disabled = true;
+                document.getElementById("resumeStatus").style.display = "none";
+                document.getElementById("uploadBtn").textContent = "📄 上传简历";
             }
             await loadSessions();
         }
@@ -300,6 +528,7 @@
             currentSessionId = sessionId;
             document.getElementById("userInput").disabled = false;
             document.getElementById("sendBtn").disabled = false;
+            document.getElementById("uploadBtn").disabled = false;
             document.getElementById("headerTitle").textContent = "面试官 Agent";
             document.getElementById("sessionInfo").textContent = `会话: ${sessionId}`;
             document.getElementById("messages").innerHTML = "";
@@ -312,8 +541,57 @@
             } catch (err) {
                 console.error("加载历史失败:", err);
             }
+            await loadResumeStatus();
             await loadSessions();
             document.getElementById("userInput").focus();
+        }
+
+        async function loadResumeStatus() {
+            if (!currentSessionId) return;
+            const statusEl = document.getElementById("resumeStatus");
+            const nameEl = document.getElementById("resumeName");
+            const dotEl = document.getElementById("statusDot");
+            const uploadBtn = document.getElementById("uploadBtn");
+
+            try {
+                const resp = await fetch(`${API_BASE}/upload/${currentSessionId}`);
+                const data = await resp.json();
+                if (data.uploaded) {
+                    const sizeStr = data.size > 1024 * 1024
+                        ? `${(data.size / 1024 / 1024).toFixed(1)} MB`
+                        : `${(data.size / 1024).toFixed(0)} KB`;
+                    nameEl.textContent = `${data.filename} (${sizeStr}, ${data.chunks}块)`;
+                    nameEl.title = `${data.filename} — 上传于 ${data.uploaded_at} — ${data.chunks} 个文本块`;
+                    dotEl.className = "status-dot uploaded";
+                    statusEl.style.display = "flex";
+                    uploadBtn.textContent = "📄 更换简历";
+                } else {
+                    statusEl.style.display = "none";
+                    uploadBtn.textContent = "📄 上传简历";
+                }
+            } catch (err) {
+                console.error("加载简历状态失败:", err);
+            }
+        }
+
+        async function removeResume() {
+            if (!currentSessionId) return;
+            if (!confirm("确定删除当前会话的简历吗？删除后需重新上传。")) return;
+
+            try {
+                const resp = await fetch(`${API_BASE}/upload/${currentSessionId}`, {
+                    method: "DELETE",
+                });
+                if (resp.ok) {
+                    showToast("✅ 简历已删除", "success");
+                    await loadResumeStatus();
+                } else {
+                    const data = await resp.json();
+                    showToast(`❌ ${data.detail || "删除失败"}`, "error");
+                }
+            } catch (err) {
+                showToast("❌ 网络错误，删除失败", "error");
+            }
         }
 
         function renderMessages() {
@@ -346,6 +624,153 @@
             const d = document.createElement("div");
             d.textContent = text;
             return d.innerHTML;
+        }
+
+        // ========== 简历上传 ==========
+        function showToast(msg, type) {
+            const toast = document.createElement("div");
+            toast.className = `upload-toast ${type}`;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        async function uploadResume() {
+            const fileInput = document.getElementById("resumeFile");
+            const file = fileInput.files[0];
+            if (!file || !currentSessionId) return;
+
+            const uploadBtn = document.getElementById("uploadBtn");
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = "⏳ 上传中...";
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const resp = await fetch(`${API_BASE}/upload/${currentSessionId}`, {
+                    method: "POST",
+                    body: formData,
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    showToast(`✅ ${data.message}`, "success");
+                    await loadResumeStatus();
+                } else {
+                    showToast(`❌ ${data.detail || "上传失败"}`, "error");
+                }
+            } catch (err) {
+                showToast("❌ 网络错误，上传失败", "error");
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = "📄 上传简历";
+                fileInput.value = "";
+            }
+        }
+
+        // ========== 模型设置 ==========
+
+        async function openSettings() {
+            // 加载当前设置
+            try {
+                const resp = await fetch(`${API_BASE}/settings`);
+                const data = await resp.json();
+                document.getElementById("settingsProvider").value = data.provider || "ollama";
+                document.getElementById("settingsModelName").value = data.model_name || "";
+                document.getElementById("settingsApiKey").value = data.api_key || "";
+                document.getElementById("settingsBaseUrl").value = data.base_url || "";
+                onProviderChange();
+            } catch (err) {
+                console.error("加载设置失败:", err);
+            }
+            document.getElementById("settingsStatus").textContent = "";
+            document.getElementById("settingsStatus").className = "status-msg";
+            document.getElementById("settingsOverlay").classList.add("show");
+        }
+
+        function closeSettings() {
+            document.getElementById("settingsOverlay").classList.remove("show");
+        }
+
+        function onProviderChange() {
+            const provider = document.getElementById("settingsProvider").value;
+            const apiKeyGroup = document.getElementById("apiKeyGroup");
+            const baseUrlGroup = document.getElementById("baseUrlGroup");
+            const modelHint = document.getElementById("modelNameHint");
+            const baseUrlHint = document.getElementById("baseUrlHint");
+
+            if (provider === "ollama") {
+                apiKeyGroup.style.display = "none";
+                baseUrlGroup.style.display = "block";
+                modelHint.textContent = "Ollama 模型名（如 deepseek-r1:7b）";
+                baseUrlHint.textContent = "Ollama 服务地址";
+                if (!document.getElementById("settingsModelName").value) {
+                    document.getElementById("settingsModelName").value = "deepseek-r1:7b";
+                }
+                if (!document.getElementById("settingsBaseUrl").value) {
+                    document.getElementById("settingsBaseUrl").value = "http://localhost:11434";
+                }
+            } else {
+                apiKeyGroup.style.display = "block";
+                baseUrlGroup.style.display = "block";
+                modelHint.textContent = "API 模型名（如 deepseek-chat、gpt-4o）";
+                baseUrlHint.textContent = "API 端点地址（如 https://api.deepseek.com/v1）";
+                if (!document.getElementById("settingsBaseUrl").value || document.getElementById("settingsBaseUrl").value === "http://localhost:11434") {
+                    document.getElementById("settingsBaseUrl").value = "https://api.deepseek.com/v1";
+                }
+            }
+        }
+
+        function toggleApiKey() {
+            const input = document.getElementById("settingsApiKey");
+            if (input.type === "password") {
+                input.type = "text";
+            } else {
+                input.type = "password";
+            }
+        }
+
+        async function saveSettings() {
+            const status = document.getElementById("settingsStatus");
+            status.textContent = "";
+            status.className = "status-msg";
+
+            const provider = document.getElementById("settingsProvider").value;
+            const modelName = document.getElementById("settingsModelName").value.trim();
+            const apiKey = document.getElementById("settingsApiKey").value.trim();
+            const baseUrl = document.getElementById("settingsBaseUrl").value.trim();
+
+            if (!modelName) {
+                status.textContent = "⚠ 请输入模型名称";
+                status.className = "status-msg error";
+                return;
+            }
+
+            if (provider === "openai_compatible" && !apiKey) {
+                status.textContent = "⚠ API Key 不能为空";
+                status.className = "status-msg error";
+                return;
+            }
+
+            try {
+                const resp = await fetch(`${API_BASE}/settings`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ provider, model_name: modelName, api_key: apiKey, base_url: baseUrl }),
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    status.textContent = "✅ 设置已保存，Agent 已切换模型";
+                    status.className = "status-msg success";
+                    setTimeout(closeSettings, 1200);
+                } else {
+                    status.textContent = "❌ " + (data.detail || "保存失败");
+                    status.className = "status-msg error";
+                }
+            } catch (err) {
+                status.textContent = "❌ 网络错误，保存失败";
+                status.className = "status-msg error";
+            }
         }
 
         async function sendMessage() {

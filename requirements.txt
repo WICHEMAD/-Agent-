@@ -2,6 +2,7 @@ fastapi
 uvicorn
 langchain
 langchain-ollama
+langchain-openai
 langchain-core
 langchain-community
 selenium
@@ -9,3 +10,7 @@ chromedriver-autoinstaller
 sqlalchemy
 python-multipart
 pydantic-settings
+langchain-chroma
+chromadb
+pypdf
+docx2txt

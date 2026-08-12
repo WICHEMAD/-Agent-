@@ -1,2 +1,2 @@
-from .tools import CalculatorTool, JobScraperTool
-tools = [CalculatorTool(), JobScraperTool()]
+from .tools import CalculatorTool, JobScraperTool, RAGResumeTool, ALL_TOOLS
+from . import tools
