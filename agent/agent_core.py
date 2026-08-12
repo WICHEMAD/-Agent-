@@ -442,12 +442,14 @@ class InterviewerAgent:
                         )
                 else:
                     # 非首次对话：面试追问模式，但允许调用工具
+                    jd_context = self._build_jd_context(user_id)
                     user_message = (
                         "[本轮指令] 你是面试官，只输出面试官说的话，不要编造求职者的回答。\n"
                         "- 如果求职者在回答面试题，简短评估后追问一个问题。\n"
                         "- 如果求职者询问岗位行情、薪资数据、招聘信息，立即调用 job_info_scraper 工具。\n"
                         "- 如果求职者要做薪资计算，调用 simple_calculator 工具。\n\n"
-                        "求职者说：" + user_message
+                        + (jd_context + "\n\n" if jd_context else "")
+                        + "求职者说：" + user_message
                     )
                 # 缓冲所有 token，用于响应过滤
                 buffer: list[str] = []
@@ -552,12 +554,14 @@ class InterviewerAgent:
                 )
         else:
             # 非首次对话：面试追问模式，但允许调用工具
+            jd_context = self._build_jd_context(user_id)
             user_message = (
                 "[本轮指令] 你是面试官，只输出面试官说的话，不要编造求职者的回答。\n"
                 "- 如果求职者在回答面试题，简短评估后追问一个问题。\n"
                 "- 如果求职者询问岗位行情、薪资数据、招聘信息，立即调用 job_info_scraper 工具。\n"
                 "- 如果求职者要做薪资计算，调用 simple_calculator 工具。\n\n"
-                "求职者说：" + user_message
+                + (jd_context + "\n\n" if jd_context else "")
+                + "求职者说：" + user_message
             )
 
         try:
